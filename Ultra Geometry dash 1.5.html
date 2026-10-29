@@ -1,0 +1,1060 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Geometry Dash Remake</title>
+  <link href="https://fonts.googleapis.com/css2?family=Pusab&family=Righteous&family=Fredoka+One&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #00ffcc;
+      --secondary: #ff0055;
+      --accent: #ffe600;
+      --bg-dark: #0b0c10;
+      --panel-bg: rgba(20, 24, 38, 0.85);
+      --panel-border: rgba(0, 255, 204, 0.4);
+    }
+
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: var(--bg-dark);
+      font-family: 'Righteous', 'Segoe UI', cursive, sans-serif;
+      color: #fff;
+    }
+
+    #app-container {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: radial-gradient(circle at center, #1a1c29 0%, #08090d 100%);
+    }
+
+    /* Canvas styling */
+    #gameCanvas {
+      box-shadow: 0 0 50px rgba(0, 255, 204, 0.2), 0 0 20px rgba(0, 0, 0, 0.8);
+      border-radius: 8px;
+      background: #000;
+    }
+
+    /* UI Overlay Container */
+    .ui-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 20px;
+    }
+
+    .interactive {
+      pointer-events: auto;
+    }
+
+    /* Game HUD */
+    #hud {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      width: 100%;
+      max-width: 900px;
+      margin: 0 auto;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .hud-card {
+      background: rgba(10, 14, 26, 0.75);
+      border: 2px solid var(--primary);
+      box-shadow: 0 0 15px rgba(0, 255, 204, 0.3);
+      padding: 10px 20px;
+      border-radius: 12px;
+      backdrop-filter: blur(5px);
+      text-align: center;
+    }
+
+    .hud-title {
+      font-size: 12px;
+      color: #aaa;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .hud-value {
+      font-size: 24px;
+      color: #fff;
+      text-shadow: 0 0 10px var(--primary);
+    }
+
+    /* Menus & Modals */
+    .modal-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(5, 7, 12, 0.85);
+      backdrop-filter: blur(8px);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease;
+      z-index: 100;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .menu-card {
+      background: var(--panel-bg);
+      border: 3px solid var(--primary);
+      border-radius: 20px;
+      padding: 30px 40px;
+      width: 90%;
+      max-width: 480px;
+      box-shadow: 0 0 40px rgba(0, 255, 204, 0.25), inset 0 0 15px rgba(0, 255, 204, 0.1);
+      text-align: center;
+      transform: scale(0.9);
+      transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .modal-overlay.active .menu-card {
+      transform: scale(1);
+    }
+
+    .menu-title {
+      font-size: 38px;
+      margin-bottom: 25px;
+      background: linear-gradient(180deg, #fff 0%, var(--primary) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 0 20px rgba(0, 255, 204, 0.5);
+      letter-spacing: 2px;
+    }
+
+    /* Buttons UI */
+    .btn-group {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .btn {
+      background: linear-gradient(135deg, rgba(0,255,204,0.2) 0%, rgba(0,180,255,0.2) 100%);
+      border: 2px solid var(--primary);
+      color: #fff;
+      padding: 14px 24px;
+      font-size: 18px;
+      font-family: inherit;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    }
+
+    .btn:hover {
+      background: linear-gradient(135deg, rgba(0,255,204,0.5) 0%, rgba(0,180,255,0.5) 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0, 255, 204, 0.4);
+    }
+
+    .btn:active {
+      transform: translateY(1px);
+    }
+
+    .btn-secondary {
+      border-color: #888;
+      background: rgba(255,255,255,0.05);
+    }
+    .btn-secondary:hover {
+      background: rgba(255,255,255,0.15);
+      border-color: #fff;
+      box-shadow: 0 6px 20px rgba(255, 255, 255, 0.2);
+    }
+
+    .btn-danger {
+      border-color: var(--secondary);
+      background: rgba(255, 0, 85, 0.15);
+    }
+    .btn-danger:hover {
+      background: rgba(255, 0, 85, 0.4);
+      box-shadow: 0 6px 20px rgba(ff, 0, 85, 0.4);
+    }
+
+    .btn-pay {
+      border-color: var(--accent);
+      background: linear-gradient(135deg, rgba(255,230,0,0.2) 0%, rgba(255,140,0,0.2) 100%);
+      color: var(--accent);
+    }
+    .btn-pay:hover {
+      background: linear-gradient(135deg, rgba(255,230,0,0.5) 0%, rgba(255,140,0,0.5) 100%);
+      color: #fff;
+      box-shadow: 0 6px 20px rgba(255, 230, 0, 0.4);
+    }
+
+    /* Settings Control UI */
+    .setting-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      font-size: 16px;
+    }
+
+    .setting-row input[type="range"] {
+      accent-color: var(--primary);
+      width: 50%;
+      cursor: pointer;
+    }
+
+    /* Skins Selection Grid */
+    .skins-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .skin-card {
+      background: rgba(255,255,255,0.05);
+      border: 2px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      padding: 15px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+
+    .skin-card.selected {
+      border-color: var(--primary);
+      background: rgba(0, 255, 204, 0.15);
+      box-shadow: 0 0 15px rgba(0, 255, 204, 0.3);
+    }
+
+    .skin-card.locked {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .skin-preview {
+      width: 40px;
+      height: 40px;
+      border-radius: 6px;
+    }
+
+    /* Pause Button */
+    #pauseBtn {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: 45px;
+      height: 45px;
+      border-radius: 50%;
+      background: rgba(10, 14, 26, 0.7);
+      border: 2px solid var(--primary);
+      color: #fff;
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.3s;
+      z-index: 10;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="app-container">
+    <canvas id="gameCanvas" width="900" height="500"></canvas>
+
+    <!-- UI Overlay Layer -->
+    <div class="ui-layer">
+      <!-- Top HUD Bar -->
+      <div id="hud">
+        <div class="hud-card">
+          <div class="hud-title">Прогрес</div>
+          <div class="hud-value" id="hudScore">0%</div>
+        </div>
+        <div class="hud-card">
+          <div class="hud-title">Час</div>
+          <div class="hud-value" id="hudTime">00:00</div>
+        </div>
+        <div class="hud-card">
+          <div class="hud-title">Спроба</div>
+          <div class="hud-value" id="hudAttempt">1</div>
+        </div>
+      </div>
+
+      <button id="pauseBtn" class="interactive">❚❚</button>
+    </div>
+
+    <!-- Main Menu Modal -->
+    <div id="mainMenu" class="modal-overlay active">
+      <div class="menu-card interactive">
+        <h1 class="menu-title">GEOMETRY DASH</h1>
+        <div class="btn-group">
+          <button class="btn" id="startBtn">▶ ГРАТИ</button>
+          <button class="btn btn-pay" id="shopBtn">🛒 МАГАЗИН / СКІНИ</button>
+          <button class="btn btn-secondary" id="settingsBtn">⚙ НАЛАШТУВАННЯ</button>
+          <button class="btn btn-danger" id="exitBtn">✖ ВИХІД</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pause Menu Modal -->
+    <div id="pauseMenu" class="modal-overlay">
+      <div class="menu-card interactive">
+        <h1 class="menu-title">ПАУЗА</h1>
+        <div class="btn-group">
+          <button class="btn" id="resumeBtn">▶ ПРОДОВЖИТИ</button>
+          <button class="btn btn-secondary" id="restartBtn">🔄 ПЕРЕЗАПУСК</button>
+          <button class="btn btn-danger" id="quitToMenuBtn">🏠 ГОЛОВНЕ МЕНЮ</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Shop / Pay Modal -->
+    <div id="shopMenu" class="modal-overlay">
+      <div class="menu-card interactive">
+        <h1 class="menu-title">МАГАЗИН СКІНІВ</h1>
+        
+        <div class="skins-grid">
+          <div class="skin-card selected" data-skin="default">
+            <div class="skin-preview" style="background: #00ffcc; border: 3px solid #0088cc;"></div>
+            <span>Класик</span>
+          </div>
+          <div class="skin-card" data-skin="neonRed">
+            <div class="skin-preview" style="background: #ff0055; border: 3px solid #ffcc00;"></div>
+            <span>Неон</span>
+          </div>
+          <div class="skin-card locked" id="vipSkinCard" data-skin="gold">
+            <div class="skin-preview" style="background: #ffe600; border: 3px solid #ffffff; box-shadow: 0 0 10px #ffe600;"></div>
+            <span id="vipSkinLabel">🔒 VIP</span>
+          </div>
+        </div>
+
+        <div class="btn-group">
+          <button class="btn btn-pay" id="payBtn">💳 КУПИТИ VIP PASS ($0.99)</button>
+          <button class="btn btn-secondary" id="closeShopBtn">НАЗАД</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsMenu" class="modal-overlay">
+      <div class="menu-card interactive">
+        <h1 class="menu-title">НАЛАШТУВАННЯ</h1>
+        
+        <div class="setting-row">
+          <label for="musicVol">Музика</label>
+          <input type="range" id="musicVol" min="0" max="100" value="70">
+        </div>
+
+        <div class="setting-row">
+          <label for="sfxVol">Звуки (SFX)</label>
+          <input type="range" id="sfxVol" min="0" max="100" value="80">
+        </div>
+
+        <div class="setting-row">
+          <label for="speedSelect">Швидкість гри</label>
+          <select id="speedSelect" style="background:#101424; color:#fff; border:1px solid var(--primary); padding:5px 10px; border-radius:6px; font-family:inherit;">
+            <option value="1">1.0x (Норм)</option>
+            <option value="1.2">1.2x (Швидко)</option>
+            <option value="1.5">1.5x (Хардкор)</option>
+          </select>
+        </div>
+
+        <div class="btn-group" style="margin-top: 20px;">
+          <button class="btn btn-secondary" id="closeSettingsBtn">ЗБЕРЕГТИ ТА НАЗАД</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Exit Confirmation Modal -->
+    <div id="exitConfirmMenu" class="modal-overlay">
+      <div class="menu-card interactive">
+        <h1 class="menu-title">ВИХІД</h1>
+        <p style="margin-bottom: 20px; color: #ccc;">Ви дійсно бажаєте закрити гру?</p>
+        <div class="btn-group">
+          <button class="btn btn-danger" id="confirmExitBtn">ТАК, ВИЙТИ</button>
+          <button class="btn btn-secondary" id="cancelExitBtn">СКАСУВАТИ</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    /* --- AUDIO SYNTHESIZER (Web Audio API) --- */
+    class SoundSystem {
+      constructor() {
+        this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+        this.musicVolume = 0.7;
+        this.sfxVolume = 0.8;
+        this.isPlayingMusic = false;
+        this.musicTimer = null;
+      }
+
+      playJump() {
+        if (this.sfxVolume <= 0) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(150, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(600, this.ctx.currentTime + 0.15);
+        
+        gain.gain.setValueAtTime(this.sfxVolume * 0.3, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.15);
+      }
+
+      playCrash() {
+        if (this.sfxVolume <= 0) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(120, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(20, this.ctx.currentTime + 0.3);
+
+        gain.gain.setValueAtTime(this.sfxVolume * 0.5, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.3);
+      }
+
+      playPad() {
+        if (this.sfxVolume <= 0) return;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(300, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(900, this.ctx.currentTime + 0.25);
+
+        gain.gain.setValueAtTime(this.sfxVolume * 0.4, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.25);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.25);
+      }
+
+      startMusic() {
+        if (this.isPlayingMusic) return;
+        this.isPlayingMusic = true;
+        let step = 0;
+        const notes = [130.81, 146.83, 164.81, 174.61, 196.00, 220.00, 246.94, 261.63]; // Bass synth loop
+
+        this.musicTimer = setInterval(() => {
+          if (!this.isPlayingMusic || this.musicVolume <= 0) return;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          
+          osc.type = 'sawtooth';
+          const freq = notes[step % notes.length] * ((step % 4 === 0) ? 0.5 : 1);
+          osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+
+          gain.gain.setValueAtTime(this.musicVolume * 0.1, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.18);
+
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + 0.18);
+
+          step++;
+        }, 200);
+      }
+
+      stopMusic() {
+        this.isPlayingMusic = false;
+        if (this.musicTimer) clearInterval(this.musicTimer);
+      }
+    }
+
+    const audio = new SoundSystem();
+
+    /* --- GAME ENGINE & STATE MANAGEMENT --- */
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const STATE = {
+      MENU: 'MENU',
+      PLAYING: 'PLAYING',
+      PAUSED: 'PAUSED',
+      GAMEOVER: 'GAMEOVER'
+    };
+
+    let gameState = STATE.MENU;
+    let gameSpeedMultiplier = 1.0;
+    let vipUnlocked = false;
+    let currentSkin = 'default';
+
+    // UI Elements
+    const mainMenu = document.getElementById('mainMenu');
+    const pauseMenu = document.getElementById('pauseMenu');
+    const shopMenu = document.getElementById('shopMenu');
+    const settingsMenu = document.getElementById('settingsMenu');
+    const exitConfirmMenu = document.getElementById('exitConfirmMenu');
+    const hud = document.getElementById('hud');
+    const pauseBtn = document.getElementById('pauseBtn');
+
+    const hudScore = document.getElementById('hudScore');
+    const hudTime = document.getElementById('hudTime');
+    const hudAttempt = document.getElementById('hudAttempt');
+
+    // Global Physics & Level Config
+    const GRAVITY = 0.65;
+    const JUMP_FORCE = -12;
+    const BASE_SPEED = 6;
+    const FLOOR_Y = 400;
+    const LEVEL_LENGTH = 15000; // Pixels to end line
+
+    let attempts = 1;
+    let gameTimeSeconds = 0;
+    let timerInterval = null;
+
+    // Player Object
+    const player = {
+      x: 100,
+      y: FLOOR_Y - 40,
+      width: 40,
+      height: 40,
+      vy: 0,
+      rotation: 0,
+      isGrounded: false,
+      trail: [],
+      
+      reset() {
+        this.x = 100;
+        this.y = FLOOR_Y - 40;
+        this.vy = 0;
+        this.rotation = 0;
+        this.isGrounded = true;
+        this.trail = [];
+      },
+
+      jump() {
+        if (this.isGrounded) {
+          this.vy = JUMP_FORCE;
+          this.isGrounded = false;
+          audio.playJump();
+        }
+      },
+
+      bounce() {
+        this.vy = JUMP_FORCE * 1.35;
+        this.isGrounded = false;
+        audio.playPad();
+      },
+
+      update() {
+        this.vy += GRAVITY;
+        this.y += this.vy;
+
+        // Ground Collision
+        if (this.y >= FLOOR_Y - this.height) {
+          this.y = FLOOR_Y - this.height;
+          this.vy = 0;
+          this.isGrounded = true;
+          // Snap rotation to nearest 90deg when landing
+          this.rotation = Math.round(this.rotation / (Math.PI / 2)) * (Math.PI / 2);
+        } else {
+          this.isGrounded = false;
+          this.rotation += 0.15; // Continuous rotation during air time
+        }
+
+        // Trail positions
+        this.trail.push({ x: this.x, y: this.y, rotation: this.rotation });
+        if (this.trail.length > 8) this.trail.shift();
+      },
+
+      draw() {
+        // Draw Trail
+        this.trail.forEach((t, index) => {
+          ctx.save();
+          ctx.translate(t.x + this.width / 2, t.y + this.height / 2);
+          ctx.rotate(t.rotation);
+          ctx.globalAlpha = (index / this.trail.length) * 0.3;
+          ctx.fillStyle = getSkinColors(currentSkin).primary;
+          ctx.fillRect(-this.width / 2, -this.height / 2, this.width, this.height);
+          ctx.restore();
+        });
+
+        // Draw Player Body
+        ctx.save();
+        ctx.translate(this.x + this.width / 2, this.y + this.height / 2);
+        ctx.rotate(this.rotation);
+
+        const colors = getSkinColors(currentSkin);
+
+        // Outer Glow & Box
+        ctx.shadowColor = colors.primary;
+        ctx.shadowBlur = 12;
+        ctx.fillStyle = colors.primary;
+        ctx.fillRect(-this.width / 2, -this.height / 2, this.width, this.height);
+
+        // Inner Design
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = colors.secondary;
+        ctx.strokeRect(-this.width / 4, -this.height / 4, this.width / 2, this.height / 2);
+
+        // Center Square / Eyes
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(-4, -4, 8, 8);
+
+        ctx.restore();
+      }
+    };
+
+    function getSkinColors(skin) {
+      switch (skin) {
+        case 'neonRed':
+          return { primary: '#ff0055', secondary: '#ffcc00' };
+        case 'gold':
+          return { primary: '#ffe600', secondary: '#ffffff' };
+        default:
+          return { primary: '#00ffcc', secondary: '#0088cc' };
+      }
+    }
+
+    /* --- LEVEL GENERATION & OBSTACLES --- */
+    let obstacles = [];
+    let particles = [];
+
+    function generateLevel() {
+      obstacles = [];
+      let currentX = 600;
+
+      while (currentX < LEVEL_LENGTH) {
+        const rand = Math.random();
+        
+        if (rand < 0.4) {
+          // Single Spike
+          obstacles.push({ type: 'spike', x: currentX, y: FLOOR_Y - 40, width: 40, height: 40 });
+          currentX += 300 + Math.random() * 200;
+        } else if (rand < 0.65) {
+          // Double Spike
+          obstacles.push({ type: 'spike', x: currentX, y: FLOOR_Y - 40, width: 40, height: 40 });
+          obstacles.push({ type: 'spike', x: currentX + 40, y: FLOOR_Y - 40, width: 40, height: 40 });
+          currentX += 400 + Math.random() * 200;
+        } else if (rand < 0.85) {
+          // Block Platform
+          obstacles.push({ type: 'block', x: currentX, y: FLOOR_Y - 40, width: 50, height: 40 });
+          if (Math.random() > 0.5) {
+            obstacles.push({ type: 'spike', x: currentX, y: FLOOR_Y - 80, width: 40, height: 40 });
+          }
+          currentX += 350 + Math.random() * 200;
+        } else {
+          // Jump Pad
+          obstacles.push({ type: 'pad', x: currentX, y: FLOOR_Y - 12, width: 45, height: 12 });
+          obstacles.push({ type: 'spike', x: currentX + 120, y: FLOOR_Y - 40, width: 40, height: 40 });
+          currentX += 450 + Math.random() * 200;
+        }
+      }
+
+      // Finish Portal Flag
+      obstacles.push({ type: 'finish', x: LEVEL_LENGTH, y: FLOOR_Y - 120, width: 20, height: 120 });
+    }
+
+    /* --- PARTICLE SYSTEM --- */
+    function createExplosion(x, y, color) {
+      for (let i = 0; i < 30; i++) {
+        particles.push({
+          x: x,
+          y: y,
+          vx: (Math.random() - 0.5) * 12,
+          vy: (Math.random() - 0.5) * 12,
+          size: Math.random() * 6 + 2,
+          color: color || '#00ffcc',
+          life: 1
+        });
+      }
+    }
+
+    function updateParticles() {
+      for (let i = particles.length - 1; i >= 0; i--) {
+        let p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life -= 0.03;
+        if (p.life <= 0) particles.splice(i, 1);
+      }
+    }
+
+    function drawParticles() {
+      particles.forEach(p => {
+        ctx.save();
+        ctx.globalAlpha = p.life;
+        ctx.fillStyle = p.color;
+        ctx.shadowColor = p.color;
+        ctx.shadowBlur = 8;
+        ctx.fillRect(p.x, p.y, p.size, p.size);
+        ctx.restore();
+      });
+    }
+
+    /* --- GAME LOOP & RENDER --- */
+    let cameraX = 0;
+
+    function resetGame() {
+      player.reset();
+      generateLevel();
+      cameraX = 0;
+      gameTimeSeconds = 0;
+      hudAttempt.innerText = attempts;
+      hudScore.innerText = '0%';
+      hudTime.innerText = '00:00';
+      startTimer();
+    }
+
+    function startTimer() {
+      clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        if (gameState === STATE.PLAYING) {
+          gameTimeSeconds++;
+          const mins = String(Math.floor(gameTimeSeconds / 60)).padStart(2, '0');
+          const secs = String(gameTimeSeconds % 60).padStart(2, '0');
+          hudTime.innerText = `${mins}:${secs}`;
+        }
+      }, 1000);
+    }
+
+    function drawBackground() {
+      // Grid pattern background
+      ctx.fillStyle = '#08090d';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.strokeStyle = 'rgba(0, 255, 204, 0.05)';
+      ctx.lineWidth = 1;
+      const gridSize = 40;
+      const offsetX = -cameraX % gridSize;
+
+      for (let x = offsetX; x < canvas.width; x += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, canvas.height);
+        ctx.stroke();
+      }
+
+      // Neon Floor Line
+      ctx.strokeStyle = '#00ffcc';
+      ctx.lineWidth = 4;
+      ctx.shadowColor = '#00ffcc';
+      ctx.shadowBlur = 15;
+      ctx.beginPath();
+      ctx.moveTo(0, FLOOR_Y);
+      ctx.lineTo(canvas.width, FLOOR_Y);
+      ctx.stroke();
+
+      // Floor Fill
+      ctx.fillStyle = '#05070a';
+      ctx.fillRect(0, FLOOR_Y, canvas.width, canvas.height - FLOOR_Y);
+      ctx.shadowBlur = 0; // reset
+    }
+
+    function render() {
+      // Clear
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Render World relative to Camera
+      drawBackground();
+
+      ctx.save();
+      ctx.translate(-cameraX, 0);
+
+      // Render Obstacles
+      obstacles.forEach(obs => {
+        if (obs.x + obs.width < cameraX || obs.x > cameraX + canvas.width) return; // Culling
+
+        if (obs.type === 'spike') {
+          ctx.fillStyle = '#ff0055';
+          ctx.strokeStyle = '#fff';
+          ctx.shadowColor = '#ff0055';
+          ctx.shadowBlur = 10;
+          ctx.beginPath();
+          ctx.moveTo(obs.x, obs.y + obs.height);
+          ctx.lineTo(obs.x + obs.width / 2, obs.y);
+          ctx.lineTo(obs.x + obs.width, obs.y + obs.height);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+        } else if (obs.type === 'block') {
+          ctx.fillStyle = '#141826';
+          ctx.strokeStyle = '#00ffcc';
+          ctx.lineWidth = 2;
+          ctx.shadowColor = '#00ffcc';
+          ctx.shadowBlur = 8;
+          ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+          ctx.strokeRect(obs.x, obs.y, obs.width, obs.height);
+        } else if (obs.type === 'pad') {
+          ctx.fillStyle = '#ffe600';
+          ctx.shadowColor = '#ffe600';
+          ctx.shadowBlur = 12;
+          ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+        } else if (obs.type === 'finish') {
+          ctx.fillStyle = '#00ffcc';
+          ctx.shadowColor = '#00ffcc';
+          ctx.shadowBlur = 20;
+          ctx.fillRect(obs.x, obs.y, obs.width, obs.height);
+        }
+      });
+
+      // Render Player
+      player.draw();
+
+      // Render Particles
+      drawParticles();
+
+      ctx.restore();
+    }
+
+    function update() {
+      if (gameState !== STATE.PLAYING) return;
+
+      const currentSpeed = BASE_SPEED * gameSpeedMultiplier;
+      player.x += currentSpeed;
+      cameraX = player.x - 150;
+
+      player.update();
+      updateParticles();
+
+      // Progress percentage
+      const progress = Math.min(100, Math.floor((player.x / LEVEL_LENGTH) * 100));
+      hudScore.innerText = `${progress}%`;
+
+      // Collision Detection
+      obstacles.forEach(obs => {
+        if (
+          player.x < obs.x + obs.width &&
+          player.x + player.width > obs.x &&
+          player.y < obs.y + obs.height &&
+          player.y + player.height > obs.y
+        ) {
+          if (obs.type === 'spike') {
+            handleCrash();
+          } else if (obs.type === 'block') {
+            // Landing on top of block vs hit side
+            if (player.vy > 0 && player.y + player.height - player.vy <= obs.y) {
+              player.y = obs.y - player.height;
+              player.vy = 0;
+              player.isGrounded = true;
+            } else {
+              handleCrash();
+            }
+          } else if (obs.type === 'pad') {
+            player.bounce();
+          } else if (obs.type === 'finish') {
+            alert('🎉 ПЕРЕМОГА! Ви пройшли рівень!');
+            switchState(STATE.MENU);
+          }
+        }
+      });
+
+      // Check Fall off bounds
+      if (player.y > canvas.height) {
+        handleCrash();
+      }
+    }
+
+    function handleCrash() {
+      audio.playCrash();
+      createExplosion(player.x + player.width / 2, player.y + player.height / 2, getSkinColors(currentSkin).primary);
+      attempts++;
+      resetGame();
+    }
+
+    function gameLoop() {
+      update();
+      render();
+      requestAnimationFrame(gameLoop);
+    }
+
+    /* --- STATE MANAGEMENT & UI HANDLERS --- */
+    function switchState(newState) {
+      gameState = newState;
+      
+      // Hide all overlays
+      mainMenu.classList.remove('active');
+      pauseMenu.classList.remove('active');
+      shopMenu.classList.remove('active');
+      settingsMenu.classList.remove('active');
+      exitConfirmMenu.classList.remove('active');
+      hud.style.opacity = '0';
+      pauseBtn.style.opacity = '0';
+
+      if (newState === STATE.MENU) {
+        mainMenu.classList.add('active');
+        audio.stopMusic();
+        clearInterval(timerInterval);
+      } else if (newState === STATE.PLAYING) {
+        hud.style.opacity = '1';
+        pauseBtn.style.opacity = '1';
+        audio.startMusic();
+      } else if (newState === STATE.PAUSED) {
+        pauseMenu.classList.add('active');
+        hud.style.opacity = '1';
+        audio.stopMusic();
+      }
+    }
+
+    // Input Listeners
+    window.addEventListener('keydown', (e) => {
+      if ((e.code === 'Space' || e.code === 'ArrowUp') && gameState === STATE.PLAYING) {
+        player.jump();
+      }
+      if (e.code === 'KeyP' || e.code === 'Escape') {
+        if (gameState === STATE.PLAYING) switchState(STATE.PAUSED);
+        else if (gameState === STATE.PAUSED) switchState(STATE.PLAYING);
+      }
+    });
+
+    canvas.addEventListener('mousedown', () => {
+      if (gameState === STATE.PLAYING) player.jump();
+    });
+
+    // UI Buttons Action Bindings
+    document.getElementById('startBtn').onclick = () => {
+      attempts = 1;
+      resetGame();
+      switchState(STATE.PLAYING);
+    };
+
+    document.getElementById('pauseBtn').onclick = () => {
+      switchState(STATE.PAUSED);
+    };
+
+    document.getElementById('resumeBtn').onclick = () => {
+      switchState(STATE.PLAYING);
+    };
+
+    document.getElementById('restartBtn').onclick = () => {
+      attempts++;
+      resetGame();
+      switchState(STATE.PLAYING);
+    };
+
+    document.getElementById('quitToMenuBtn').onclick = () => {
+      switchState(STATE.MENU);
+    };
+
+    // Shop & VIP Pay
+    document.getElementById('shopBtn').onclick = () => {
+      mainMenu.classList.remove('active');
+      shopMenu.classList.add('active');
+    };
+
+    document.getElementById('closeShopBtn').onclick = () => {
+      shopMenu.classList.remove('active');
+      mainMenu.classList.add('active');
+    };
+
+    document.getElementById('payBtn').onclick = () => {
+      if (vipUnlocked) {
+        alert('Ви вже придбали VIP Pass!');
+        return;
+      }
+      if (confirm('Підтвердити симуляцію оплати $0.99 за VIP Pass?')) {
+        vipUnlocked = true;
+        document.getElementById('vipSkinCard').classList.remove('locked');
+        document.getElementById('vipSkinLabel').innerText = 'VIP Золотий';
+        document.getElementById('payBtn').innerText = '✅ VIP АКТИВОВАНО';
+        alert('🎉 Дякуємо за покупку! VIP скін розблоковано!');
+      }
+    };
+
+    // Skins Selector Grid
+    document.querySelectorAll('.skin-card').forEach(card => {
+      card.onclick = () => {
+        const skin = card.dataset.skin;
+        if (skin === 'gold' && !vipUnlocked) {
+          alert('Купіть VIP Pass щоб розблокувати цей скін!');
+          return;
+        }
+        document.querySelectorAll('.skin-card').forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
+        currentSkin = skin;
+      };
+    });
+
+    // Settings Controls
+    document.getElementById('settingsBtn').onclick = () => {
+      mainMenu.classList.remove('active');
+      settingsMenu.classList.add('active');
+    };
+
+    document.getElementById('closeSettingsBtn').onclick = () => {
+      settingsMenu.classList.remove('active');
+      mainMenu.classList.add('active');
+    };
+
+    document.getElementById('musicVol').oninput = (e) => {
+      audio.musicVolume = e.target.value / 100;
+    };
+
+    document.getElementById('sfxVol').oninput = (e) => {
+      audio.sfxVolume = e.target.value / 100;
+    };
+
+    document.getElementById('speedSelect').onchange = (e) => {
+      gameSpeedMultiplier = parseFloat(e.target.value);
+    };
+
+    // Exit Modal
+    document.getElementById('exitBtn').onclick = () => {
+      mainMenu.classList.remove('active');
+      exitConfirmMenu.classList.add('active');
+    };
+
+    document.getElementById('cancelExitBtn').onclick = () => {
+      exitConfirmMenu.classList.remove('active');
+      mainMenu.classList.add('active');
+    };
+
+    document.getElementById('confirmExitBtn').onclick = () => {
+      document.body.innerHTML = '<div style="display:flex;justify-content:center;align-items:center;height:100vh;font-size:24px;color:#fff;">Гру завершено. Закрийте вкладку.</div>';
+    };
+
+    // Start Loop Initializer
+    resetGame();
+    gameLoop();
+  </script>
+</body>
+</html>
